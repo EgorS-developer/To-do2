@@ -1,12 +1,18 @@
 let input = null;
 let valueInput = "";
-let allTasks = JSON.parse(localStorage.getItem("allTasks")) || [];
+let allTasks = []
 let tempIndex = -1;
 let valueInputChange = "";
-console.log(allTasks)
+// 
 // дом.задание  ==== сделать так, чтоб добавллись таски на кнопку Enter + добавить зачеркивание выполненной таски
 
-window.onload = function init() {
+window.onload = async function init(){
+
+const response =await fetch("http://localhost:8000/allTasks", {method:"GET"})
+const result= await response.json()
+allTasks = result.data
+
+
   input = document.getElementById("text-task");
   input.addEventListener("change", updateValue);
   input.addEventListener("keyup", Enter)
@@ -23,12 +29,19 @@ const updateValue = (event) => {
   valueInput = event.target.value;
 };
 
-const addTask = () => {
+const addTask = async () => {
   if (valueInput === "") {
     alert("Ты долбоеб, не клацай пустые значения!!!");
   } else {
     allTasks.push({ text: valueInput, isCheck: false });
-    localStorage.setItem("allTasks", JSON.stringify(allTasks))
+    const response = await fetch("http://localhost:8000/createTask", {
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json;charset=utf-8",
+        "Access-Control-Allow-Origin":"*"
+      },
+       body:JSON.stringify({ text: valueInput, isCheck: false })
+      })
     valueInput = "";
     input.value = "";
     render();
@@ -47,9 +60,15 @@ const editTask = (index) => {
   render();
 };
 
-const deleteTask = (index) => {
-  allTasks.splice(index, 1);
-  localStorage.setItem("allTasks", JSON.stringify(allTasks))
+const deleteTask = async (_id) => {
+  const response = await fetch("http://localhost:8000/deleteFail", {
+    method:"DELETE",
+    headers:{
+      "Content-Type":"application/json;charset=utf-8",
+      "Access-Control-Allow-Origin":"*"
+    },
+     body:JSON.stringify({taskId:_id})
+    })
   render();
 };
 
@@ -59,10 +78,22 @@ const resetButton = () => {
   render();
 };
 
-const doneTask = () => {
-  allTasks[tempIndex].text = valueInputChange;
-  tempIndex = -1;
-  localStorage.setItem("allTasks", JSON.stringify(allTasks))
+const doneTask = async (item1) => {
+  // allTasks[tempIndex].text = valueInputChange;
+let item = {...item1,text:valueInputChange}
+  const response = await fetch("http://localhost:8000/changFail",{
+  method:"PATCH",
+    headers:{
+      "Content-Type":"application/json;charset=utf-8",
+      "Access-Control-Allow-Origin":"*"
+    },
+    body:JSON.stringify(item)
+})
+  const result= await response.json()
+  console.log(result)
+  allTasks = result
+   tempIndex = -1;
+  // localStorage.setItem("allTasks", JSON.stringify(allTasks))
   render();
 };
 
@@ -75,10 +106,23 @@ const cancelTask = () => {
   render();
 };
 
-const changeCheckbox = (index) => {
-  allTasks[index].isCheck = !allTasks[index].isCheck;
-  localStorage.setItem("allTasks", JSON.stringify(allTasks))
+const changeCheckbox = async (item1) => {
+  let item = {...item1,isCheck:!item1.isCheck}
+  const response = await fetch("http://localhost:8000/changFail",{
+    method:"PATCH",
+    headers:{
+      "Content-Type":"application/json;charset=utf-8",
+      "Access-Control-Allow-Origin":"*"
+    },
+    body:JSON.stringify(item)
+})
+  // allTasks[index].isCheck = !allTasks[index].isCheck;
+  // localStorage.setItem("allTasks", JSON.stringify(allTasks))
+  const result= await response.json()
+  console.log(result)
+  allTasks = result
   render();
+
 };
 
 const render = () => {
@@ -106,7 +150,7 @@ const render = () => {
     let checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.checked = item.isCheck;
-    checkbox.addEventListener("change", () => changeCheckbox(index));
+    checkbox.addEventListener("change", () => changeCheckbox(item));
     task.appendChild(checkbox);
 
     if (tempIndex === index) {
@@ -121,7 +165,7 @@ const render = () => {
 
       let imageDone = document.createElement("img");
       imageDone.src = "./done.png";
-      imageDone.addEventListener("click", doneTask);
+      imageDone.addEventListener("click",()=> doneTask(item));
       imageContainerChange.appendChild(imageDone);
 
       let imageCancel = document.createElement("img");
@@ -146,7 +190,7 @@ const render = () => {
 
       let imageDelete = document.createElement("img");
       imageDelete.src = "./delete.png";
-      imageDelete.addEventListener("click", () => deleteTask(index));
+      imageDelete.addEventListener("click", () => deleteTask(item._id));
       imageContainer.appendChild(imageDelete);
 
       task.appendChild(imageContainer);
